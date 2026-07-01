@@ -144,3 +144,57 @@ TimerTick() {
     s := Mod(elapsed, 60)
     TimerFloatElapsedCtrl.Text := Format("{:02}:{:02}:{:02}", h, m, s)
 }
+
+; --- Alt+Y: 停止當前計時 ----------------------------------------------------
+!y::TimerStop()
+
+TimerStop() {
+    global TimerCurrentTask
+    body := TimerJsonBody(Map("action", "stop", "token", TIMER_TOKEN))
+    try {
+        resp := TimerHttp(body)
+    } catch as e {
+        MsgBox("停止失敗：" . e.Message, "Timer", "IconX")
+        return
+    }
+    if InStr(resp, '"error":"no_active"') {
+        TimerFlashTip("沒有進行中的任務")
+        return
+    }
+    if !InStr(resp, '"ok":true') {
+        MsgBox("停止失敗（server）：" . resp, "Timer", "IconX")
+        return
+    }
+
+    task := TimerExtractString(resp, "task")
+    minutes := TimerExtractInt(resp, "duration_min")
+
+    TimerHideFloat()
+    TimerCurrentTask := ""
+    TimerFlashTip("已停止：" . SubStr(task, 1, 30) . " (" . minutes . " 分鐘)")
+}
+
+TimerFlashTip(text) {
+    ToolTip(text)
+    SetTimer(() => ToolTip(), -1000)
+}
+
+TimerExtractString(json, key) {
+    if RegExMatch(json, '"' . key . '"\s*:\s*"((?:[^"\\]|\\.)*)"', &m)
+        return TimerJsonUnescape(m[1])
+    return ""
+}
+
+TimerExtractInt(json, key) {
+    if RegExMatch(json, '"' . key . '"\s*:\s*(-?\d+)', &m)
+        return m[1] + 0
+    return 0
+}
+
+TimerJsonUnescape(s) {
+    s := StrReplace(s, "\n", "`n")
+    s := StrReplace(s, "\t", "`t")
+    s := StrReplace(s, '\"', '"')
+    s := StrReplace(s, "\\", "\")
+    return s
+}
