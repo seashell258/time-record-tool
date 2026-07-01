@@ -1,0 +1,2 @@
+# Keep shell scripts as LF so they run on Android/Termux after checkout on Windows
+*.sh   text eol=lf

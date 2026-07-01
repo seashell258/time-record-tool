@@ -4,8 +4,9 @@
 .env
 .env.*
 
-# OS / editor
+# OS / editor / temp files
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+~$*    # MS Office lock files
