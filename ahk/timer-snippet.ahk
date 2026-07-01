@@ -3,8 +3,8 @@
 ; 附加到 Seashell (2).ahk 末尾，AHK v2 語法。
 ; =============================================================================
 
-TIMER_WEBAPP_URL := "YOUR_WEBAPP_URL"
-TIMER_TOKEN      := "YOUR_TOKEN"
+global TIMER_WEBAPP_URL := "YOUR_WEBAPP_URL"
+global TIMER_TOKEN      := "YOUR_TOKEN"
 
 global TimerFloatGui         := ""
 global TimerFloatTaskCtrl    := ""
@@ -51,18 +51,17 @@ TimerShowInput() {
 }
 
 TimerStart(task) {
-    body := TimerJsonBody(Map("action", "start", "task", task, "token", TIMER_TOKEN))
     try {
+        body := TimerJsonBody(Map("action", "start", "task", task, "token", TIMER_TOKEN))
         resp := TimerHttp(body)
+        if !InStr(resp, '"ok":true') {
+            MsgBox("開始失敗（server）：" . resp, "Timer", "IconX")
+            return
+        }
+        TimerShowFloat(task)
     } catch as e {
-        MsgBox("開始失敗：" . e.Message, "Timer", "IconX")
-        return
+        MsgBox("開始失敗：" . e.Message . "`n`n" . e.What . " at " . e.File . ":" . e.Line, "Timer", "IconX")
     }
-    if !InStr(resp, '"ok":true') {
-        MsgBox("開始失敗（server）：" . resp, "Timer", "IconX")
-        return
-    }
-    TimerShowFloat(task)
 }
 
 ; --- JSON body construction -------------------------------------------------
@@ -87,9 +86,10 @@ TimerJsonString(s) {
 }
 
 ; --- HTTP POST to the Apps Script Web App -----------------------------------
+; WinHttp default is to follow redirects (Option 6 defaults to TRUE), so we
+; don't need to set it explicitly. Apps Script issues a 302 to script.googleusercontent.com.
 TimerHttp(body) {
     req := ComObject("WinHttp.WinHttpRequest.5.1")
-    req.Option[6] := true   ; auto-follow redirects (Apps Script uses 302)
     req.Open("POST", TIMER_WEBAPP_URL, false)
     req.SetRequestHeader("Content-Type", "application/json")
     req.Send(body)
@@ -105,7 +105,7 @@ TimerShowFloat(task) {
     TimerCurrentTask := task
     TimerStartTick := A_TickCount
 
-    TimerFloatGui := Gui("+AlwaysOnTop -Caption +ToolWindow +LastFound +E0x08000000", "TimerFloat")
+    TimerFloatGui := Gui("+AlwaysOnTop -Caption +ToolWindow +E0x08000000", "TimerFloat")
     ; E0x08000000 = WS_EX_NOACTIVATE — click won't steal focus
     TimerFloatGui.BackColor := "1e1e1e"
     TimerFloatGui.SetFont("s10 cWhite", "Segoe UI")
@@ -150,28 +150,25 @@ TimerTick() {
 
 TimerStop() {
     global TimerCurrentTask
-    body := TimerJsonBody(Map("action", "stop", "token", TIMER_TOKEN))
     try {
+        body := TimerJsonBody(Map("action", "stop", "token", TIMER_TOKEN))
         resp := TimerHttp(body)
+        if InStr(resp, '"error":"no_active"') {
+            TimerFlashTip("沒有進行中的任務")
+            return
+        }
+        if !InStr(resp, '"ok":true') {
+            MsgBox("停止失敗（server）：" . resp, "Timer", "IconX")
+            return
+        }
+        task := TimerExtractString(resp, "task")
+        minutes := TimerExtractInt(resp, "duration_min")
+        TimerHideFloat()
+        TimerCurrentTask := ""
+        TimerFlashTip("已停止：" . SubStr(task, 1, 30) . " (" . minutes . " 分鐘)")
     } catch as e {
-        MsgBox("停止失敗：" . e.Message, "Timer", "IconX")
-        return
+        MsgBox("停止失敗：" . e.Message . "`n`n" . e.What . " at " . e.File . ":" . e.Line, "Timer", "IconX")
     }
-    if InStr(resp, '"error":"no_active"') {
-        TimerFlashTip("沒有進行中的任務")
-        return
-    }
-    if !InStr(resp, '"ok":true') {
-        MsgBox("停止失敗（server）：" . resp, "Timer", "IconX")
-        return
-    }
-
-    task := TimerExtractString(resp, "task")
-    minutes := TimerExtractInt(resp, "duration_min")
-
-    TimerHideFloat()
-    TimerCurrentTask := ""
-    TimerFlashTip("已停止：" . SubStr(task, 1, 30) . " (" . minutes . " 分鐘)")
 }
 
 TimerFlashTip(text) {
