@@ -89,7 +89,7 @@ TimerJsonString(s) {
 ; --- HTTP POST to the Apps Script Web App -----------------------------------
 TimerHttp(body) {
     req := ComObject("WinHttp.WinHttpRequest.5.1")
-    req.Option(6) := true   ; auto-follow redirects (Apps Script uses 302)
+    req.Option[6] := true   ; auto-follow redirects (Apps Script uses 302)
     req.Open("POST", TIMER_WEBAPP_URL, false)
     req.SetRequestHeader("Content-Type", "application/json")
     req.Send(body)
