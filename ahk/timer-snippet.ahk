@@ -16,32 +16,33 @@ global TimerCurrentTask      := ""
 !t::TimerShowInput()
 
 TimerShowInput() {
-    inputGui := Gui("+AlwaysOnTop +ToolWindow", "新任務")
+    inputGui := Gui("+AlwaysOnTop +ToolWindow", "新任務 (Shift+Enter 送出、Enter 換行、Esc 取消)")
     inputGui.SetFont("s11", "Segoe UI")
     inputGui.MarginX := 12
     inputGui.MarginY := 12
-    edit := inputGui.AddEdit("w480 r5 vTaskText -WantReturn Multi WantTab")
+    ; Multi = multi-line. WantTab lets Tab insert a tab character.
+    ; Enter naturally inserts a newline (default multiline Edit behavior) —
+    ; this is important for Chinese IME, whose Enter confirms candidates.
+    edit := inputGui.AddEdit("w480 r5 vTaskText Multi WantTab")
     inputGui.OnEvent("Escape", (*) => inputGui.Destroy())
 
     submit(*) {
         task := edit.Value
         inputGui.Destroy()
-        if (Trim(task) != "")
-            TimerStart(task)
-    }
-    newline(*) {
-        edit.Value := edit.Value . "`r`n"
-        SendMessage(0xB1, -1, -1, edit.Hwnd)  ; caret to end
+        task := Trim(task)
+        if (task = "") {
+            MsgBox("任務內容是空的，沒有送出。", "Timer", "IconI")
+            return
+        }
+        TimerStart(task)
     }
 
     HotIfWinActive("ahk_id " inputGui.Hwnd)
-    Hotkey("Enter", submit, "On")
-    Hotkey("+Enter", newline, "On")
+    Hotkey("+Enter", submit, "On")
     HotIfWinActive()
 
     inputGui.OnEvent("Close", (*) => (
         HotIfWinActive("ahk_id " inputGui.Hwnd),
-        Hotkey("Enter", "Off"),
         Hotkey("+Enter", "Off"),
         HotIfWinActive()
     ))
