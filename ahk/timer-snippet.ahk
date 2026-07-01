@@ -98,8 +98,49 @@ TimerHttp(body) {
     return req.ResponseText
 }
 
-; --- Floating window: stub for now, replaced in Task 7 ---------------------
 TimerShowFloat(task) {
-    ToolTip("Started: " . SubStr(task, 1, 40))
-    SetTimer(() => ToolTip(), -2000)
+    global TimerFloatGui, TimerFloatTaskCtrl, TimerFloatElapsedCtrl, TimerStartTick, TimerCurrentTask
+    TimerHideFloat()
+
+    TimerCurrentTask := task
+    TimerStartTick := A_TickCount
+
+    TimerFloatGui := Gui("+AlwaysOnTop -Caption +ToolWindow +LastFound +E0x08000000", "TimerFloat")
+    ; E0x08000000 = WS_EX_NOACTIVATE — click won't steal focus
+    TimerFloatGui.BackColor := "1e1e1e"
+    TimerFloatGui.SetFont("s10 cWhite", "Segoe UI")
+    TimerFloatGui.MarginX := 10
+    TimerFloatGui.MarginY := 8
+
+    display := "● " . SubStr(task, 1, 20)
+    if (StrLen(task) > 20)
+        display .= "…"
+    TimerFloatTaskCtrl := TimerFloatGui.AddText("w220", display)
+    TimerFloatElapsedCtrl := TimerFloatGui.AddText("w220", "00:00:00")
+
+    monWidth := A_ScreenWidth, monHeight := A_ScreenHeight
+    TimerFloatGui.Show("x" (monWidth - 260) " y" (monHeight - 100) " NoActivate")
+
+    SetTimer(TimerTick, 1000)
+    TimerTick()
+}
+
+TimerHideFloat() {
+    global TimerFloatGui
+    SetTimer(TimerTick, 0)
+    if (TimerFloatGui != "" && WinExist("ahk_id " TimerFloatGui.Hwnd)) {
+        TimerFloatGui.Destroy()
+    }
+    TimerFloatGui := ""
+}
+
+TimerTick() {
+    global TimerFloatElapsedCtrl, TimerStartTick
+    if (TimerFloatElapsedCtrl = "")
+        return
+    elapsed := (A_TickCount - TimerStartTick) // 1000
+    h := elapsed // 3600
+    m := (elapsed // 60) - h * 60
+    s := Mod(elapsed, 60)
+    TimerFloatElapsedCtrl.Text := Format("{:02}:{:02}:{:02}", h, m, s)
 }
