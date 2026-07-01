@@ -32,6 +32,18 @@ function sheet() {
   return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
 }
 
+// Robust reads: Sheets may hand back Date objects even when the column is
+// "Plain text", so coerce back to strings we can parse.
+function readDateStr(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, TZ, 'yyyy-MM-dd');
+  return String(v);
+}
+
+function readTimeStr(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, TZ, 'HH:mm');
+  return String(v);
+}
+
 // Returns { rowNum, dateStr, startStr, task } or null.
 function findActiveRow(sh) {
   const lastRow = sh.getLastRow();
@@ -43,8 +55,8 @@ function findActiveRow(sh) {
     if (!endCell && taskCell) {
       return {
         rowNum:   i + 2,
-        dateStr:  String(values[i][0]),
-        startStr: String(values[i][1]),
+        dateStr:  readDateStr(values[i][0]),
+        startStr: readTimeStr(values[i][1]),
         task:     String(taskCell),
       };
     }
@@ -66,20 +78,23 @@ function fmtTime(d) {
   return Utilities.formatDate(d, TZ, 'HH:mm');
 }
 
+// Prefix with apostrophe to force Sheets to store as text (prevents auto-
+// conversion of "2026-07-01" to a Date object or "11:05" to a Time object).
+// The apostrophe is invisible on display and stripped by getValue()/getValues().
+function asText(s) {
+  return "'" + s;
+}
+
 // Compose a Date from "yyyy-MM-dd" and "HH:mm" strings in TZ.
 function composeDate(dateStr, timeStr) {
-  // Utilities.parseDate is finicky; do this manually.
   const [y, mo, d] = dateStr.split('-').map(Number);
   const [h, mi] = timeStr.split(':').map(Number);
-  // Build a Date interpreted in TZ. Trick: build as-if UTC, then adjust by TZ offset.
   const asIfUtc = new Date(Date.UTC(y, mo - 1, d, h, mi, 0));
-  // Compute offset for this instant in TZ.
   const offsetMin = tzOffsetMinutes(asIfUtc);
   return new Date(asIfUtc.getTime() - offsetMin * 60000);
 }
 
 function tzOffsetMinutes(d) {
-  // e.g. "+0800" -> +480
   const s = Utilities.formatDate(d, TZ, 'Z');
   const sign = s[0] === '-' ? -1 : 1;
   const h = parseInt(s.substring(1, 3), 10);
@@ -91,7 +106,6 @@ function durationMinutes(from, to) {
   return Math.round((to.getTime() - from.getTime()) / 60000);
 }
 
-// End-of-day timestamp for a given date string.
 function endOfDay(dateStr) {
   return composeDate(dateStr, '23:59');
 }
@@ -105,27 +119,23 @@ function actionStart(task) {
   const today = fmtDate(nowDt);
   const nowTime = fmtTime(nowDt);
 
-  // Close any previous open row.
   const active = findActiveRow(sh);
   if (active) {
     if (active.dateStr === today) {
-      // superseded — end at now
       const startDt = composeDate(active.dateStr, active.startStr);
       const dur = durationMinutes(startDt, nowDt);
-      sh.getRange(active.rowNum, 3, 1, 2).setValues([[nowTime, dur]]);
+      sh.getRange(active.rowNum, 3, 1, 2).setValues([[asText(nowTime), dur]]);
       sh.getRange(active.rowNum, 10).setValue('superseded');
     } else {
-      // cross-day — treat as day_boundary at 23:59 of active's date
       const startDt = composeDate(active.dateStr, active.startStr);
       const endDt = endOfDay(active.dateStr);
       const dur = durationMinutes(startDt, endDt);
-      sh.getRange(active.rowNum, 3, 1, 2).setValues([['23:59', dur]]);
+      sh.getRange(active.rowNum, 3, 1, 2).setValues([[asText('23:59'), dur]]);
       sh.getRange(active.rowNum, 10).setValue('day_boundary');
     }
   }
 
-  // Append new row.
-  sh.appendRow([today, nowTime, '', '', task, '', '', '', '', '']);
+  sh.appendRow([asText(today), asText(nowTime), '', '', task, '', '', '', '', '']);
   return { ok: true };
 }
 
@@ -141,14 +151,13 @@ function actionStop() {
 
   if (active.dateStr === today) {
     const dur = durationMinutes(startDt, nowDt);
-    sh.getRange(active.rowNum, 3, 1, 2).setValues([[nowTime, dur]]);
+    sh.getRange(active.rowNum, 3, 1, 2).setValues([[asText(nowTime), dur]]);
     sh.getRange(active.rowNum, 10).setValue('manual');
     return { ok: true, task: active.task, duration_min: dur };
   } else {
-    // Stopping a task from a previous day — cap at that day's 23:59
     const endDt = endOfDay(active.dateStr);
     const dur = durationMinutes(startDt, endDt);
-    sh.getRange(active.rowNum, 3, 1, 2).setValues([['23:59', dur]]);
+    sh.getRange(active.rowNum, 3, 1, 2).setValues([[asText('23:59'), dur]]);
     sh.getRange(active.rowNum, 10).setValue('day_boundary');
     return { ok: true, task: active.task, duration_min: dur };
   }
@@ -164,8 +173,8 @@ function dayBoundary() {
   const values = sh.getRange(2, 1, lastRow - 1, 10).getValues();
   const toUpdate = [];
   for (let i = 0; i < values.length; i++) {
-    const dateStr = String(values[i][0]);
-    const startStr = String(values[i][1]);
+    const dateStr = readDateStr(values[i][0]);
+    const startStr = readTimeStr(values[i][1]);
     const endCell = values[i][2];
     const taskCell = values[i][4];
     if (!endCell && taskCell && dateStr < today) {
@@ -176,7 +185,7 @@ function dayBoundary() {
     }
   }
   toUpdate.forEach(u => {
-    sh.getRange(u.rowNum, 3, 1, 2).setValues([['23:59', u.dur]]);
+    sh.getRange(u.rowNum, 3, 1, 2).setValues([[asText('23:59'), u.dur]]);
     sh.getRange(u.rowNum, 10).setValue('day_boundary');
   });
 }
