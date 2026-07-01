@@ -109,18 +109,18 @@ TimerShowFloat(task) {
     TimerFloatGui := Gui("+AlwaysOnTop -Caption +ToolWindow +E0x08000000", "TimerFloat")
     ; E0x08000000 = WS_EX_NOACTIVATE — click won't steal focus
     TimerFloatGui.BackColor := "1e1e1e"
-    TimerFloatGui.SetFont("s10 cWhite", "Segoe UI")
-    TimerFloatGui.MarginX := 10
-    TimerFloatGui.MarginY := 8
+    TimerFloatGui.SetFont("s9 cWhite", "Segoe UI")
+    TimerFloatGui.MarginX := 6
+    TimerFloatGui.MarginY := 4
 
-    display := "● " . SubStr(task, 1, 20)
-    if (StrLen(task) > 20)
+    display := "● " . SubStr(task, 1, 16)
+    if (StrLen(task) > 16)
         display .= "…"
-    TimerFloatTaskCtrl := TimerFloatGui.AddText("w220", display)
-    TimerFloatElapsedCtrl := TimerFloatGui.AddText("w220", "00:00:00")
+    TimerFloatTaskCtrl := TimerFloatGui.AddText("w160", display)
+    TimerFloatElapsedCtrl := TimerFloatGui.AddText("w160", "00:00:00")
 
     monWidth := A_ScreenWidth, monHeight := A_ScreenHeight
-    TimerFloatGui.Show("x" (monWidth - 260) " y" (monHeight - 100) " NoActivate")
+    TimerFloatGui.Show("x" (monWidth - 176) " y" (monHeight - 80) " NoActivate")
 
     SetTimer(TimerTick, 1000)
     TimerTick()
