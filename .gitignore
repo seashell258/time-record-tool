@@ -1,0 +1,11 @@
+# Local copies with real secrets — never commit
+*.local
+*.local.*
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
