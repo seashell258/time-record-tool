@@ -1,8 +1,15 @@
 #!/data/data/com.termux/files/usr/bin/bash
 set -euo pipefail
 
-WEBAPP_URL="YOUR_WEBAPP_URL"
-TOKEN="YOUR_TOKEN"
+WEBAPP_URL="https://script.google.com/macros/s/AKfycbwwwq5LpWrQ2Xc7NgbpbgcbnLLgk5TooQkuJUFKdB-_oDiDMxSf5PHLlFQlwE5bEVg8lg/exec"
+TOKEN="0c885013e07e6ee6994e9a3a8ba7d56bb873ba48af7475b87389a66679100450"
+
+notify() {
+  # Notification 比 toast 可靠（Android 12+ 會吞背景 app 的 toast）
+  termux-vibrate -d 120 >/dev/null 2>&1 || true
+  termux-notification --title "Timer" --content "$1" --id timer-status --priority default
+  (sleep 3 && termux-notification-remove timer-status >/dev/null 2>&1) &
+}
 
 BODY=$(jq -nc --arg tk "$TOKEN" '{action:"stop", token:$tk}')
 
@@ -14,12 +21,12 @@ OK=$(printf '%s' "$RESP" | jq -r '.ok // false')
 if [ "$OK" = "true" ]; then
   TASK=$(printf '%s' "$RESP" | jq -r '.task // ""')
   MIN=$(printf '%s' "$RESP" | jq -r '.duration_min // 0')
-  termux-toast "已停止：$TASK ($MIN 分鐘)"
+  notify "已停止：$TASK ($MIN 分鐘)"
 else
   ERR=$(printf '%s' "$RESP" | jq -r '.error // "unknown"')
   if [ "$ERR" = "no_active" ]; then
-    termux-toast "沒有進行中的任務"
+    notify "沒有進行中的任務"
   else
-    termux-toast "失敗：$ERR"
+    notify "失敗：$ERR"
   fi
 fi
