@@ -70,6 +70,12 @@ function isStrictHHMM(s) {
   return typeof s === 'string' && /^\d{2}:\d{2}$/.test(s);
 }
 
+// Returns 'legit' (today's date + strict HH:MM) or 'recovery' (anything else).
+function classifyRow(dateStr, startStr, today) {
+  if (dateStr === today && isStrictHHMM(startStr)) return 'legit';
+  return 'recovery';
+}
+
 function now() {
   return new Date();
 }
@@ -218,4 +224,24 @@ function _testIsStrictHHMM() {
     }
   });
   Logger.log('isStrictHHMM: PASS (' + cases.length + ' cases)');
+}
+
+function _testClassifyRow() {
+  const cases = [
+    // [dateStr, startStr, today, expectedKind]
+    ['2026-07-03', '09:00', '2026-07-03', 'legit'],
+    ['2026-07-03', '09:00', '2026-07-04', 'recovery'],  // yesterday's row
+    ['2026-07-03', '9:00',  '2026-07-03', 'recovery'],  // bad HH:MM
+    ['',           '09:00', '2026-07-03', 'recovery'],  // blank date
+    ['2026-07-03', '',      '2026-07-03', 'recovery'],  // blank start
+    ['',           '',      '2026-07-03', 'recovery'],
+    ['garbage',    'garbage','2026-07-03', 'recovery'],
+  ];
+  cases.forEach(([dateStr, startStr, today, expected]) => {
+    const actual = classifyRow(dateStr, startStr, today);
+    if (actual !== expected) {
+      throw new Error(`classifyRow(${dateStr}, ${startStr}, ${today}) = ${actual}, expected ${expected}`);
+    }
+  });
+  Logger.log('classifyRow: PASS (' + cases.length + ' cases)');
 }
