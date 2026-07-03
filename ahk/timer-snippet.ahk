@@ -190,6 +190,12 @@ TimerExtractInt(json, key) {
     return 0
 }
 
+TimerExtractBool(json, key) {
+    if RegExMatch(json, '"' . key . '"\s*:\s*(true|false)', &m)
+        return m[1] = "true"
+    return false
+}
+
 TimerJsonUnescape(s) {
     s := StrReplace(s, "\n", "`n")
     s := StrReplace(s, "\t", "`t")
