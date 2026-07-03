@@ -168,26 +168,41 @@ function actionStart(task) {
 
 function actionStop() {
   const sh = sheet();
-  const active = findActiveRow(sh);
-  if (!active) return { ok: false, error: 'no_active' };
-
   const nowDt = now();
   const today = fmtDate(nowDt);
   const nowTime = fmtTime(nowDt);
-  const startDt = composeDate(active.dateStr, active.startStr);
 
-  if (active.dateStr === today) {
+  const active = findActiveRow(sh, today);
+  if (!active) return { ok: false, error: 'no_active' };
+
+  if (active.kind === 'legit') {
+    const startDt = composeDate(active.dateStr, active.startStr);
     const dur = durationMinutes(startDt, nowDt);
     sh.getRange(active.rowNum, 3, 1, 2).setValues([[asText(nowTime), dur]]);
     sh.getRange(active.rowNum, 10).setValue('manual');
     return { ok: true, task: active.task, duration_min: dur };
-  } else {
-    const endDt = endOfDay(active.dateStr);
-    const dur = durationMinutes(startDt, endDt);
-    sh.getRange(active.rowNum, 3, 1, 2).setValues([[asText('23:59'), dur]]);
-    sh.getRange(active.rowNum, 10).setValue('day_boundary');
-    return { ok: true, task: active.task, duration_min: dur };
   }
+
+  // kind === 'recovery'
+  // Force date to today; fill end = now; compute duration only if start is
+  // strict HH:MM and lands in the past on today's date. Leave B (start) alone
+  // so we don't destroy user input.
+  const updates = { A: asText(today), C: asText(nowTime), D: '' };
+  if (isStrictHHMM(active.startStr)) {
+    const startDt = composeDate(today, active.startStr);
+    if (startDt.getTime() <= nowDt.getTime()) {
+      updates.D = durationMinutes(startDt, nowDt);
+    }
+  }
+  sh.getRange(active.rowNum, 1).setValue(updates.A);
+  sh.getRange(active.rowNum, 3, 1, 2).setValues([[updates.C, updates.D]]);
+  sh.getRange(active.rowNum, 10).setValue('manual_partial');
+  return {
+    ok: true,
+    task: active.task,
+    duration_min: updates.D === '' ? null : updates.D,
+    partial: true,
+  };
 }
 
 // --- Scheduled trigger (Time-driven, daily ~04:00) --------------------------
@@ -314,4 +329,16 @@ function _testPickActiveRow() {
   if (!f || f.rowNum !== 9) throw new Error('F failed: ' + JSON.stringify(f));
 
   Logger.log('pickActiveRow: PASS (6 cases)');
+}
+
+// Prints the current sheet's last 5 rows for visual inspection during smoke tests.
+function _dumpLastRows() {
+  const sh = sheet();
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) { Logger.log('(empty)'); return; }
+  const start = Math.max(2, lastRow - 4);
+  const rows = sh.getRange(start, 1, lastRow - start + 1, 10).getValues();
+  rows.forEach((r, i) => {
+    Logger.log('row ' + (start + i) + ': ' + JSON.stringify(r));
+  });
 }
