@@ -76,6 +76,20 @@ function classifyRow(dateStr, startStr, today) {
   return 'recovery';
 }
 
+// candidates: [{ rowNum, dateStr, startStr, task }, ...] in ascending rowNum order.
+// Returns the best pick with `kind` attached, or null.
+function pickActiveRow(candidates, today) {
+  let latestLegit = null;
+  let latestRecovery = null;
+  for (const c of candidates) {
+    const kind = classifyRow(c.dateStr, c.startStr, today);
+    const entry = Object.assign({}, c, { kind });
+    if (kind === 'legit') latestLegit = entry;
+    else latestRecovery = entry;
+  }
+  return latestLegit || latestRecovery;
+}
+
 function now() {
   return new Date();
 }
@@ -244,4 +258,57 @@ function _testClassifyRow() {
     }
   });
   Logger.log('classifyRow: PASS (' + cases.length + ' cases)');
+}
+
+function _testPickActiveRow() {
+  const today = '2026-07-03';
+
+  // Case A: empty list
+  if (pickActiveRow([], today) !== null) throw new Error('empty list should return null');
+
+  // Case B: only recovery
+  const b = pickActiveRow(
+    [{ rowNum: 2, dateStr: '', startStr: '', task: 'foo' }],
+    today
+  );
+  if (!b || b.kind !== 'recovery' || b.rowNum !== 2) throw new Error('B failed: ' + JSON.stringify(b));
+
+  // Case C: only legit
+  const c = pickActiveRow(
+    [{ rowNum: 3, dateStr: today, startStr: '09:00', task: 'foo' }],
+    today
+  );
+  if (!c || c.kind !== 'legit' || c.rowNum !== 3) throw new Error('C failed: ' + JSON.stringify(c));
+
+  // Case D: legit + recovery coexist → legit wins even if recovery is later
+  const d = pickActiveRow(
+    [
+      { rowNum: 4, dateStr: today, startStr: '09:00', task: 'real' },
+      { rowNum: 5, dateStr: '',    startStr: '',      task: 'manual' },  // later row
+    ],
+    today
+  );
+  if (!d || d.kind !== 'legit' || d.rowNum !== 4) throw new Error('D failed: ' + JSON.stringify(d));
+
+  // Case E: two legits → pick latest (highest rowNum)
+  const e = pickActiveRow(
+    [
+      { rowNum: 6, dateStr: today, startStr: '09:00', task: 'older' },
+      { rowNum: 7, dateStr: today, startStr: '10:00', task: 'newer' },
+    ],
+    today
+  );
+  if (!e || e.rowNum !== 7) throw new Error('E failed: ' + JSON.stringify(e));
+
+  // Case F: two recoveries → pick latest
+  const f = pickActiveRow(
+    [
+      { rowNum: 8, dateStr: '', startStr: '', task: 'older' },
+      { rowNum: 9, dateStr: '', startStr: '', task: 'newer' },
+    ],
+    today
+  );
+  if (!f || f.rowNum !== 9) throw new Error('F failed: ' + JSON.stringify(f));
+
+  Logger.log('pickActiveRow: PASS (6 cases)');
 }
