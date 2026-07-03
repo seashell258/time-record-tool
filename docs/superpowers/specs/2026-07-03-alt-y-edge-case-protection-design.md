@@ -1,7 +1,7 @@
 # Alt+Y 邊界防護設計文件
 
 **日期：** 2026-07-03
-**狀態：** 設計定稿
+**狀態：** 已實作（2026-07-03）
 **範圍：** `apps-script/Code.gs` 的 `actionStop` 路徑 + `ahk/timer-snippet.ahk` 的 Alt+Y toast
 
 ---
