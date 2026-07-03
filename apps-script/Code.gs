@@ -66,6 +66,10 @@ function findActiveRow(sh) {
 
 // --- Time helpers ------------------------------------------------------------
 
+function isStrictHHMM(s) {
+  return typeof s === 'string' && /^\d{2}:\d{2}$/.test(s);
+}
+
 function now() {
   return new Date();
 }
@@ -188,4 +192,30 @@ function dayBoundary() {
     sh.getRange(u.rowNum, 3, 1, 2).setValues([[asText('23:59'), u.dur]]);
     sh.getRange(u.rowNum, 10).setValue('day_boundary');
   });
+}
+
+// --- Test functions (run manually in Apps Script IDE) --------------------
+
+function _testIsStrictHHMM() {
+  const cases = [
+    ['09:00', true],
+    ['00:00', true],
+    ['23:59', true],
+    ['9:00',  false],   // single-digit hour
+    ['09:5',  false],   // single-digit minute
+    ['9:5',   false],
+    ['',      false],
+    ['abc',   false],
+    ['09時00', false],
+    ['09:00 AM', false],
+    ['9點',   false],
+    ['24:00', true],    // regex only, semantic bounds not enforced — documented in spec
+  ];
+  cases.forEach(([input, expected]) => {
+    const actual = isStrictHHMM(input);
+    if (actual !== expected) {
+      throw new Error(`isStrictHHMM(${JSON.stringify(input)}) = ${actual}, expected ${expected}`);
+    }
+  });
+  Logger.log('isStrictHHMM: PASS (' + cases.length + ' cases)');
 }
