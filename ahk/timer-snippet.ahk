@@ -3,14 +3,16 @@
 ; 附加到 Seashell (2).ahk 末尾，AHK v2 語法。
 ; =============================================================================
 
-global TIMER_WEBAPP_URL := "YOUR_WEBAPP_URL"
-global TIMER_TOKEN      := "YOUR_TOKEN"
+global TIMER_WEBAPP_URL := "https://script.google.com/macros/s/AKfycbwwwq5LpWrQ2Xc7NgbpbgcbnLLgk5TooQkuJUFKdB-_oDiDMxSf5PHLlFQlwE5bEVg8lg/exec"
+global TIMER_TOKEN      := "0c885013e07e6ee6994e9a3a8ba7d56bb873ba48af7475b87389a66679100450"
 
 global TimerFloatGui         := ""
 global TimerFloatTaskCtrl    := ""
 global TimerFloatElapsedCtrl := ""
 global TimerStartTick        := 0
 global TimerCurrentTask      := ""
+
+OnMessage(0x201, TimerFloat_WM_LBUTTONDOWN)
 
 ; --- Alt+T: 開啟輸入視窗 ---------------------------------------------------
 !t::TimerShowInput()
@@ -87,8 +89,6 @@ TimerJsonString(s) {
 }
 
 ; --- HTTP POST to the Apps Script Web App -----------------------------------
-; WinHttp default is to follow redirects (Option 6 defaults to TRUE), so we
-; don't need to set it explicitly. Apps Script issues a 302 to script.googleusercontent.com.
 TimerHttp(body) {
     req := ComObject("WinHttp.WinHttpRequest.5.1")
     req.Open("POST", TIMER_WEBAPP_URL, false)
@@ -116,13 +116,14 @@ TimerShowFloat(task) {
     display := "● " . SubStr(task, 1, 16)
     if (StrLen(task) > 16)
         display .= "…"
-    TimerFloatTaskCtrl := TimerFloatGui.AddText("w160", display)
-    TimerFloatElapsedCtrl := TimerFloatGui.AddText("w160", "00:00:00")
+    TimerFloatTaskCtrl := TimerFloatGui.AddText("w130", display)
+    TimerFloatElapsedCtrl := TimerFloatGui.AddText("w130", "00:00:00")
+
 
     monWidth := A_ScreenWidth, monHeight := A_ScreenHeight
-    TimerFloatGui.Show("x" (monWidth - 176) " y" (monHeight - 80) " NoActivate")
+    TimerFloatGui.Show("x" (monWidth - 166) " y" (monHeight - 80) " NoActivate")
 
-    SetTimer(TimerTick, 1000)
+    SetTimer(TimerTick, 10000)
     TimerTick()
 }
 
@@ -195,4 +196,17 @@ TimerJsonUnescape(s) {
     s := StrReplace(s, '\"', '"')
     s := StrReplace(s, "\\", "\")
     return s
+}
+
+TimerFloat_WM_LBUTTONDOWN(wParam, lParam, msg, hwnd)
+{
+    global TimerFloatGui
+
+    if (!IsSet(TimerFloatGui) || TimerFloatGui = "")
+        return
+
+    if (hwnd != TimerFloatGui.Hwnd)
+        return
+
+    PostMessage(0xA1, 2,,, "ahk_id " hwnd)
 }

@@ -2,7 +2,7 @@
 // Timer Web App — see docs/superpowers/specs/2026-07-01-timer-design.md
 // =============================================================================
 
-const SCRIPT_TOKEN = 'YOUR_TOKEN';
+const SCRIPT_TOKEN = '0c885013e07e6ee6994e9a3a8ba7d56bb873ba48af7475b87389a66679100450';
 const SHEET_NAME   = 'records';
 const TZ           = 'Asia/Taipei';
 
