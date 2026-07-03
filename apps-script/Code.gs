@@ -44,24 +44,27 @@ function readTimeStr(v) {
   return String(v);
 }
 
-// Returns { rowNum, dateStr, startStr, task } or null.
-function findActiveRow(sh) {
+// Returns { rowNum, dateStr, startStr, task, kind } or null.
+// kind: 'legit' (today + strict HH:MM) or 'recovery' (anything else).
+// Prefers the latest legit row; falls back to the latest recovery row.
+function findActiveRow(sh, today) {
   const lastRow = sh.getLastRow();
   if (lastRow < 2) return null;
-  const values = sh.getRange(2, 1, lastRow - 1, 10).getValues();  // columns A..J
-  for (let i = values.length - 1; i >= 0; i--) {
+  const values = sh.getRange(2, 1, lastRow - 1, 10).getValues();
+  const candidates = [];
+  for (let i = 0; i < values.length; i++) {
     const endCell = values[i][2];
     const taskCell = values[i][4];
     if (!endCell && taskCell) {
-      return {
+      candidates.push({
         rowNum:   i + 2,
         dateStr:  readDateStr(values[i][0]),
         startStr: readTimeStr(values[i][1]),
         task:     String(taskCell),
-      };
+      });
     }
   }
-  return null;
+  return pickActiveRow(candidates, today);
 }
 
 // --- Time helpers ------------------------------------------------------------
@@ -143,7 +146,7 @@ function actionStart(task) {
   const today = fmtDate(nowDt);
   const nowTime = fmtTime(nowDt);
 
-  const active = findActiveRow(sh);
+  const active = findActiveRow(sh, today);
   if (active) {
     if (active.dateStr === today) {
       const startDt = composeDate(active.dateStr, active.startStr);
