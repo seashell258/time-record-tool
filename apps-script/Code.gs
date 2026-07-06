@@ -197,33 +197,6 @@ function actionStop() {
   };
 }
 
-// --- Scheduled trigger (Time-driven, daily ~04:00) --------------------------
-
-function dayBoundary() {
-  const sh = sheet();
-  const lastRow = sh.getLastRow();
-  if (lastRow < 2) return;
-  const today = fmtDate(now());
-  const values = sh.getRange(2, 1, lastRow - 1, 10).getValues();
-  const toUpdate = [];
-  for (let i = 0; i < values.length; i++) {
-    const dateStr = readDateStr(values[i][0]);
-    const startStr = readTimeStr(values[i][1]);
-    const endCell = values[i][2];
-    const taskCell = values[i][4];
-    if (!endCell && taskCell && dateStr < today) {
-      const startDt = composeDate(dateStr, startStr);
-      const endDt = endOfDay(dateStr);
-      const dur = durationMinutes(startDt, endDt);
-      toUpdate.push({ rowNum: i + 2, dur });
-    }
-  }
-  toUpdate.forEach(u => {
-    sh.getRange(u.rowNum, 3, 1, 2).setValues([[asText('23:59'), u.dur]]);
-    sh.getRange(u.rowNum, 10).setValue('day_boundary');
-  });
-}
-
 // --- Test functions (run manually in Apps Script IDE) --------------------
 
 function _testIsStrictHHMM() {
