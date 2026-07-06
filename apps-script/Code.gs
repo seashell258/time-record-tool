@@ -133,10 +133,6 @@ function durationMinutes(from, to) {
   return Math.round((to.getTime() - from.getTime()) / 60000);
 }
 
-function endOfDay(dateStr) {
-  return composeDate(dateStr, '23:59');
-}
-
 // --- Actions -----------------------------------------------------------------
 
 function actionStart(task) {
