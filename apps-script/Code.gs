@@ -148,18 +148,10 @@ function actionStart(task) {
 
   const active = findActiveRow(sh, today);
   if (active) {
-    if (active.dateStr === today) {
-      const startDt = composeDate(active.dateStr, active.startStr);
-      const dur = durationMinutes(startDt, nowDt);
-      sh.getRange(active.rowNum, 3, 1, 2).setValues([[asText(nowTime), dur]]);
-      sh.getRange(active.rowNum, 10).setValue('superseded');
-    } else {
-      const startDt = composeDate(active.dateStr, active.startStr);
-      const endDt = endOfDay(active.dateStr);
-      const dur = durationMinutes(startDt, endDt);
-      sh.getRange(active.rowNum, 3, 1, 2).setValues([[asText('23:59'), dur]]);
-      sh.getRange(active.rowNum, 10).setValue('day_boundary');
-    }
+    const startDt = composeDate(active.dateStr, active.startStr);
+    const dur = durationMinutes(startDt, nowDt);
+    sh.getRange(active.rowNum, 3, 1, 2).setValues([[asText(nowTime), dur]]);
+    sh.getRange(active.rowNum, 10).setValue('stop_timer');
   }
 
   sh.appendRow([asText(today), asText(nowTime), '', '', task, '', '', '', '', '']);
