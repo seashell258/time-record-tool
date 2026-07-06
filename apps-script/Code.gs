@@ -179,7 +179,7 @@ function actionStop() {
     const startDt = composeDate(active.dateStr, active.startStr);
     const dur = durationMinutes(startDt, nowDt);
     sh.getRange(active.rowNum, 3, 1, 2).setValues([[asText(nowTime), dur]]);
-    sh.getRange(active.rowNum, 10).setValue('manual');
+    sh.getRange(active.rowNum, 10).setValue('stop_timer');
     return { ok: true, task: active.task, duration_min: dur };
   }
 
