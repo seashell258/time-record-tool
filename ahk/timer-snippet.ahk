@@ -164,10 +164,18 @@ TimerStop() {
             return
         }
         task := TimerExtractString(resp, "task")
+        partial := TimerExtractBool(resp, "partial")
+        hasMinutes := RegExMatch(resp, '"duration_min"\s*:\s*(-?\d+)')
         minutes := TimerExtractInt(resp, "duration_min")
         TimerHideFloat()
         TimerCurrentTask := ""
-        TimerFlashTip("已停止：" . SubStr(task, 1, 30) . " (" . minutes . " 分鐘)")
+        shortTask := SubStr(task, 1, 30)
+        if (partial && hasMinutes)
+            TimerFlashTip("已補紀錄：" . shortTask . " (" . minutes . " 分鐘)")
+        else if (partial)
+            TimerFlashTip("已補紀錄：" . shortTask . "（未算耗時）")
+        else
+            TimerFlashTip("已停止：" . shortTask . " (" . minutes . " 分鐘)")
     } catch as e {
         MsgBox("停止失敗：" . e.Message . "`n`n" . e.What . " at " . e.File . ":" . e.Line, "Timer", "IconX")
     }
@@ -188,6 +196,12 @@ TimerExtractInt(json, key) {
     if RegExMatch(json, '"' . key . '"\s*:\s*(-?\d+)', &m)
         return m[1] + 0
     return 0
+}
+
+TimerExtractBool(json, key) {
+    if RegExMatch(json, '"' . key . '"\s*:\s*(true|false)', &m)
+        return m[1] = "true"
+    return false
 }
 
 TimerJsonUnescape(s) {
