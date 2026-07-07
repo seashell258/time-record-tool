@@ -143,7 +143,7 @@ function actionStart(task) {
   const nowTime = fmtTime(nowDt);
 
   const active = findActiveRow(sh, today);
-  if (active) {
+  if (active && active.kind === 'legit') {
     const startDt = composeDate(active.dateStr, active.startStr);
     const dur = durationMinutes(startDt, nowDt);
     sh.getRange(active.rowNum, 3, 1, 2).setValues([[asText(nowTime), dur]]);
